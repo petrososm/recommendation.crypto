@@ -1,19 +1,19 @@
 package com.exercise.recommendation.crypto.service.api;
 
-import com.exercise.recommendation.crypto.model.CryptoNormalizedRange;
-import com.exercise.recommendation.crypto.model.CryptoStats;
+import com.exercise.recommendation.crypto.service.api.model.CryptoNormalizedRange;
+import com.exercise.recommendation.crypto.service.api.model.CryptoStats;
 
 import java.time.LocalDate;
 import java.util.List;
 
 public interface CryptoRecommendationService {
 
-    List<CryptoNormalizedRange> getCryptoNormalizedRanges();
+    List<CryptoNormalizedRange> getNormalizedAll();
 
-    CryptoNormalizedRange getCryptoNormalizedRange(String name);
+    CryptoNormalizedRange getNormalizedBySymbol(String symbol);
 
-    CryptoNormalizedRange getCryptoNormalizedRangeForDate(String name, LocalDate date);
+    CryptoNormalizedRange getMaxNormalizedByDate( LocalDate date);
 
-    CryptoStats getStats(String name);
+    CryptoStats getStatsBySymbol(String symbol);
 
 }

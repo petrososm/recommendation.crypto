@@ -1,7 +1,8 @@
 package com.exercise.recommendation.crypto;
 
-import com.exercise.recommendation.crypto.dao.api.CryptoPriceRaw;
 import com.exercise.recommendation.crypto.dao.api.CryptoPricesDao;
+import com.exercise.recommendation.crypto.exception.NotFoundException;
+import com.exercise.recommendation.crypto.service.api.model.CryptoDayStats;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,15 +16,24 @@ public class CryptoDaoTest {
     @Autowired
     private CryptoPricesDao cryptoPricesDao;
 
+
+    private static final String VALID_SYMBOL = "BTC";
+    private static final String INVALID_SYMBOL = "BTC1";
     @Test
     void testGetCryptoPricesPositive(){
-        List<CryptoPriceRaw> btc = cryptoPricesDao.getCryptoPrices("BTC");
-        Assert.notEmpty(btc,"Prices for BTC are not present in the db");
+        List<CryptoDayStats> dailyStats = cryptoPricesDao.getDailyStats(VALID_SYMBOL);
+        Assert.notEmpty(dailyStats,"Prices for BTC are not present in the db");
     }
 
     @Test
     void testGetCryptoPricesNegative(){
-        List<CryptoPriceRaw> btc = cryptoPricesDao.getCryptoPrices("BTC_inv");
-        Assert.isTrue(btc.size()==0,"Prices for BTC_inv are present in the db");
+        boolean excThrown = false;
+        try {
+            List<CryptoDayStats> dailyStats = cryptoPricesDao.getDailyStats(INVALID_SYMBOL);
+        }catch (NotFoundException nfe){
+            //empty
+            excThrown = true;
+        }
+        Assert.isTrue(excThrown,"Exception not thrown for incorrect symbol");
     }
 }

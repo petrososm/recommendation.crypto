@@ -1,4 +1,4 @@
-package com.exercise.recommendation.crypto.model;
+package com.exercise.recommendation.crypto.service.api.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class CryptoPrice {
 
-
     private LocalDateTime timestamp;
     private double price;
+
 }

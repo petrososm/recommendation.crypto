@@ -1,4 +1,4 @@
-package com.exercise.recommendation.crypto.dao.api;
+package com.exercise.recommendation.crypto.dao.api.model;
 
 import com.opencsv.bean.CsvBindByName;
 import lombok.Builder;

@@ -1,4 +1,4 @@
-package com.exercise.recommendation.crypto.model;
+package com.exercise.recommendation.crypto.service.api.model;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -9,4 +9,5 @@ public class CryptoNormalizedRange {
 
     private String symbol;
     private double normalizedRange;
+
 }

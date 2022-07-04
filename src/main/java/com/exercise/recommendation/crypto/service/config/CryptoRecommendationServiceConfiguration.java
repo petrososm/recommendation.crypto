@@ -9,6 +9,7 @@ import org.springframework.web.context.annotation.ApplicationScope;
 import javax.annotation.PostConstruct;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 
 @ApplicationScope
@@ -24,7 +25,7 @@ public class CryptoRecommendationServiceConfiguration {
 
     @Autowired
     private Environment env;
-    private Set<AcceptedCryptoConfig> acceptedCryptos;
+    private Set<CryptoRecommendationConfig> acceptedCryptos;
 
     @PostConstruct
     private void init() {
@@ -33,7 +34,7 @@ public class CryptoRecommendationServiceConfiguration {
             String[] split = acceptedCryptosStr.split(",");
             for (String symbol : split) {
                 String requiredDays = env.getProperty("accepted.cryptos." + symbol + ".requiredDays", acceptedCryptosDefaultRequiredDays);
-                acceptedCryptos.add(AcceptedCryptoConfig.builder()
+                acceptedCryptos.add(CryptoRecommendationConfig.builder()
                         .symbol(symbol)
                         .requiredMonths(Integer.parseInt(requiredDays)).
                         build());
@@ -42,7 +43,23 @@ public class CryptoRecommendationServiceConfiguration {
     }
 
 
-    public Set<AcceptedCryptoConfig> getAcceptedCryptos() {
+    public Set<CryptoRecommendationConfig> getAcceptedCryptos() {
         return acceptedCryptos;
+    }
+
+    public Set<String> getAcceptedCryptoSymbols() {
+        return acceptedCryptos.stream().map(CryptoRecommendationConfig::getSymbol).collect(Collectors.toSet());
+    }
+
+    public int getRequiredDays(String symbol) {
+        return acceptedCryptos.stream()
+                .filter(s -> s.getSymbol().equals(symbol))
+                .findFirst()
+                .map(CryptoRecommendationConfig::getRequiredMonths)
+                .orElseThrow(() -> new RuntimeException("Symbol not defined in configuration"));
+    }
+
+    public boolean isCryptoSupported(String symbol){
+        return getAcceptedCryptoSymbols().contains(symbol);
     }
 }

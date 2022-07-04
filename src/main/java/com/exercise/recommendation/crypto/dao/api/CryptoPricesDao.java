@@ -1,12 +1,13 @@
 package com.exercise.recommendation.crypto.dao.api;
 
-import com.exercise.recommendation.crypto.model.CryptoStats;
+import com.exercise.recommendation.crypto.service.api.model.CryptoDayStats;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public interface CryptoPricesDao {
 
-    CryptoStats getStats(String cryptoName);
-    CryptoStats getDayStats(String cryptoName, LocalDate date);
+    List<CryptoDayStats> getDailyStats(String cryptoName);
+    CryptoDayStats getDailyStats(String cryptoName, LocalDate date);
 
 }

@@ -1,8 +1,10 @@
 package com.exercise.recommendation.crypto.dao;
 
 import com.exercise.recommendation.crypto.dao.api.*;
-import com.exercise.recommendation.crypto.model.CryptoPrice;
-import com.exercise.recommendation.crypto.model.CryptoStats;
+import com.exercise.recommendation.crypto.dao.api.model.CryptoPriceRaw;
+import com.exercise.recommendation.crypto.exception.NotFoundException;
+import com.exercise.recommendation.crypto.service.api.model.CryptoDayStats;
+import com.exercise.recommendation.crypto.service.api.model.CryptoPrice;
 import com.exercise.recommendation.crypto.utils.csvparser.CsvParseException;
 import com.exercise.recommendation.crypto.utils.csvparser.CsvReader;
 import com.exercise.recommendation.crypto.utils.date.DateUtils;
@@ -20,6 +22,7 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 @ApplicationScope
@@ -34,23 +37,24 @@ public class CryptoPricesDaoFileImpl implements CryptoPricesDao {
 
     private Map<String, List<CryptoPriceRaw>> cryptoPricesDb;
 
-    private Map<String, Map<LocalDate, CryptoStats>> dayStatsMap;
-    private Map<String, CryptoStats> allStatsMap;
+    private Map<String, Map<LocalDate, CryptoDayStats>> dayStatsMap;
 
 
     @Value("${crypto.resource.folder}")
-    private String csvPath = "prices";
+    private String csvPath;
+
+    @Value("${crypto.resource.filePostfix}")
+    private String filePostfix;
 
 
     @PostConstruct
     private void init() throws CsvParseException, IOException {
         cryptoPricesDb = new HashMap<>();
         dayStatsMap = new HashMap<>();
-        allStatsMap = new HashMap<>();
         try {
-            Resource[] resources = FileUtils.getResources(csvPath, this.getClass().getClassLoader());
+            Resource[] resources = FileUtils.getResourcesFromClasspath(csvPath, this.getClass().getClassLoader());
             for (Resource cryptoPricesFileName : resources) {
-                String cryptoName = cryptoPricesFileName.getFilename().replace("_values.csv", "");
+                String cryptoName = cryptoPricesFileName.getFilename().replace(filePostfix, "");
 
                 List<CryptoPriceRaw> cryptoPriceRaws = csvReader.readValues(
                         cryptoPricesFileName.getInputStream(),
@@ -66,31 +70,14 @@ public class CryptoPricesDaoFileImpl implements CryptoPricesDao {
                 }
 
 
-                Map<LocalDate, CryptoStats> cryptoDayStats = new LinkedHashMap();
-
-                CryptoPrice newestValue = pricesPerDay.entrySet().iterator().next().getValue().get(0);
-                CryptoPrice oldestValue = newestValue;
-                CryptoPrice max = newestValue;
-                CryptoPrice min = newestValue;
-                for (Map.Entry<LocalDate, List<CryptoPrice>> entry : pricesPerDay.entrySet()) {
-                    LocalDate k = entry.getKey();
-                    List<CryptoPrice> v = entry.getValue();
-                    oldestValue = v.get(v.size() - 1);
-                    CryptoStats cryptoDayStat = computeCryptoDayStats(v);
-                    cryptoDayStats.put(k,cryptoDayStat);
-                    if(max.getPrice()<cryptoDayStat.getMax().getPrice()){
-                        max = cryptoDayStat.getMax();
-                    }
-                    if(min.getPrice()>cryptoDayStat.getMin().getPrice()){
-                        min = cryptoDayStat.getMin();
-                    }
-                }
-                CryptoStats cryptoStats = CryptoStats.builder().newest(newestValue).oldest(oldestValue).min(min).max(max).build();
-
+                Map<LocalDate, CryptoDayStats> cryptoDayStats = new LinkedHashMap<>();
+                pricesPerDay.forEach((day, priceList) -> {
+                    CryptoDayStats cryptoDayStat = computeCryptoDayStats(day, priceList);
+                    cryptoDayStats.put(day, cryptoDayStat);
+                });
 
                 cryptoPricesDb.computeIfAbsent(cryptoName, c -> new ArrayList<>()).addAll(cryptoPriceRaws);
                 dayStatsMap.computeIfAbsent(cryptoName, c -> new HashMap<>()).putAll(cryptoDayStats);
-                allStatsMap.put(cryptoName,cryptoStats);
 
             }
 
@@ -100,7 +87,7 @@ public class CryptoPricesDaoFileImpl implements CryptoPricesDao {
         }
     }
 
-    private CryptoStats computeCryptoDayStats(List<CryptoPrice> v) {
+    private CryptoDayStats computeCryptoDayStats(LocalDate day, List<CryptoPrice> v) {
         CryptoPrice max = v.get(0);
         CryptoPrice min = v.get(0);
         for (CryptoPrice cryptoPrice : v) {
@@ -110,26 +97,31 @@ public class CryptoPricesDaoFileImpl implements CryptoPricesDao {
                 min = cryptoPrice;
             }
         }
-
-        CryptoStats cryptoDayStat = CryptoStats.builder()
+        return CryptoDayStats.cryptoStatsBuilder()
                 .newest(v.get(0))
                 .oldest(v.get(v.size() - 1))
                 .max(max)
                 .min(min)
+                .day(day)
                 .build();
-        return cryptoDayStat;
     }
 
 
     @Override
-    public CryptoStats getStats(String cryptoName) {
-        return allStatsMap.get(cryptoName);
+    public List<CryptoDayStats> getDailyStats(String cryptoName) {
+        Map<LocalDate, CryptoDayStats> dayStatsMap = this.dayStatsMap.get(cryptoName);
+        if (dayStatsMap == null) {
+            throw new NotFoundException("No data exist for symbol " + cryptoName);
+        }
+        return dayStatsMap.values().stream().sorted(Comparator.comparing(CryptoDayStats::getDay)).collect(Collectors.toList());
     }
 
     @Override
-    public CryptoStats getDayStats(String cryptoName, LocalDate date) {
-        Map<LocalDate, CryptoStats> localDateCryptoStatsMap = dayStatsMap.get(cryptoName);
-        //assert not null
+    public CryptoDayStats getDailyStats(String cryptoName, LocalDate date) {
+        Map<LocalDate, CryptoDayStats> localDateCryptoStatsMap = dayStatsMap.get(cryptoName);
+        if (localDateCryptoStatsMap == null) {
+            throw new NotFoundException("No data exist for symbol " + cryptoName);
+        }
         return localDateCryptoStatsMap.get(date);
     }
 }
